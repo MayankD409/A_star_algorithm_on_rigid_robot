@@ -73,15 +73,12 @@ def up_right(x, y, cost):
     cost = cost + 1.4
     return x, y, cost
 
-
-
 # Define a heuristic function for A*
 def heuristic(node, goal):
-    # Using Manhattan distance as the heuristic
-    return abs(node.x - goal.x) + abs(node.y - goal.y)
-
-
-
+    # Using Euclidean distance as the heuristic
+    dx = node.x - goal.x
+    dy = node.y - goal.y
+    return math.sqrt(dx*dx + dy*dy)
 
 ############ CONFIGURATION SPACE CONSTRUCTION WITH OBSTACLES ############
 def Configuration_space(width,height, robot_radius):
@@ -351,12 +348,7 @@ def frames_to_video(frames_dir, output_video):
     cv2.destroyAllWindows()
     video.release()
 
-
-
-
-
 if __name__ == '__main__':
-    # Your existing code...
     width = 600
     height = 250
     robot_radius = 5
@@ -399,4 +391,3 @@ if __name__ == '__main__':
         print("Video created successfully!")
     else:
         print("Goal not found!")
-
