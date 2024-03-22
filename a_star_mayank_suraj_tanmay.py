@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 # Github repository:  https://github.com/MayankD409/Dijkstra_Point_Robot.git
 
@@ -71,6 +72,16 @@ def up_right(x, y, cost):
     y = y + 1
     cost = cost + 1.4
     return x, y, cost
+
+
+
+# Define a heuristic function for A*
+def heuristic(node, goal):
+    # Using Manhattan distance as the heuristic
+    return abs(node.x - goal.x) + abs(node.y - goal.y)
+
+
+
 
 ############ CONFIGURATION SPACE CONSTRUCTION WITH OBSTACLES ############
 def Configuration_space(width,height, robot_radius):
@@ -163,65 +174,64 @@ def Configuration_space(width,height, robot_radius):
 
 def is_valid(x, y, obs_space):
     height, width = obs_space.shape
-    
-    # Check if coordinates are within the boundaries of the obstacle space and if the cell is occupied by an obstacle (value 1 or 2)
-    if x < 0 or x >= width or y < 0 or y >= height or obs_space[y][x] == 1  or obs_space[y][x]==2:
+    if x < 0 or x >= width or y < 0 or y >= height or obs_space[y][x] == 1 or obs_space[y][x] == 2:
         return False
-    
     return obs_space[y, x] == 0
 
 ############## CHECK IF THE GOAL NODE IS REACHED ###############
 
 def is_goal(present, goal):
-
     if (present.x == goal.x) and (present.y == goal.y):
         return True
     else:
         return False
 
-############# DIJKSTRA ALGORITHM ###############
 
-def dijkstra(start_node, goal_node, obs_space):
+# A* algorithm implementation
+def astar(start_node, goal_node, obs_space):
     if is_goal(start_node, goal_node):
         return None, 1
-    
+
     possible_moves = [up, down, left, right, bottom_left, bottom_right, up_left, up_right]
-    open_nodes = {(start_node.x, start_node.y): start_node}  # Dictionary of open nodes with coordinates as keys
+    open_nodes = {(start_node.x, start_node.y): start_node}
     closed_nodes = {}
-    priority_queue = []  # Dictionary of closed nodes with coordinates as keys
-    heapq.heappush(priority_queue, [start_node.cost, start_node])  # Prioritize nodes with less cost
-    
-    traversed_nodes = []  # Store all traversed nodes for visualization
+    priority_queue = []
+    heapq.heappush(priority_queue, [start_node.cost + heuristic(start_node, goal_node), start_node])
+
+    traversed_nodes = []
     
     while priority_queue:
         current_node = heapq.heappop(priority_queue)[1]
         traversed_nodes.append([current_node.x, current_node.y])
         current_node_coords = (current_node.x, current_node.y)
-        
+
         if is_goal(current_node, goal_node):
             goal_node.parent_id, goal_node.cost = current_node.parent_id, current_node.cost
             print("Goal Node found")
             return traversed_nodes, 1
 
-        if current_node_coords in closed_nodes:  
+        if current_node_coords in closed_nodes:
             continue
 
         closed_nodes[current_node_coords] = current_node
         for move in possible_moves:
             x, y, cost = move(current_node.x, current_node.y, current_node.cost)
             new_node = Node(x, y, cost, current_node)
-            new_node_coords = (new_node.x, new_node.y) 
-            
+            new_node_coords = (new_node.x, new_node.y)
+
             if is_valid(new_node.x, new_node.y, obs_space) and new_node_coords not in closed_nodes:
+                new_node_cost = new_node.cost + heuristic(new_node, goal_node)
                 if new_node_coords in open_nodes:
-                    if new_node.cost < open_nodes[new_node_coords].cost: 
+                    if new_node_cost < open_nodes[new_node_coords].cost + heuristic(open_nodes[new_node_coords], goal_node):
                         open_nodes[new_node_coords].cost = new_node.cost
                         open_nodes[new_node_coords].parent_id = new_node.parent_id
                 else:
                     open_nodes[new_node_coords] = new_node
-                    heapq.heappush(priority_queue, [new_node.cost, new_node])
-   
+                    heapq.heappush(priority_queue, [new_node_cost, new_node])
+
     return traversed_nodes, 0
+
+
 
 ########### BACKTRACK AND GENERATE SHORTEST PATH ############
 
@@ -342,7 +352,11 @@ def frames_to_video(frames_dir, output_video):
     video.release()
 
 
+
+
+
 if __name__ == '__main__':
+    # Your existing code...
     width = 600
     height = 250
     robot_radius = 5
@@ -369,9 +383,8 @@ if __name__ == '__main__':
     save_dir = "frames"
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
-
     timer_begin = time.time()
-    traversed_nodes, goal_found = dijkstra(start_point, goal_point, obs_space)
+    traversed_nodes, goal_found = astar(start_point, goal_point, obs_space)
     timer_end = time.time()
     print("Time taken to explore:", timer_end - timer_begin, "seconds")
 
