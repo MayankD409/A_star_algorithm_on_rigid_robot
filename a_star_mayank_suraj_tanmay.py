@@ -73,74 +73,36 @@ def up_right(x, y, cost):
     return x, y, cost
 
 ############ CONFIGURATION SPACE CONSTRUCTION WITH OBSTACLES ############
-#### Check if point is inside Rectangle ####
-def is_point_inside_rectangle(x, y, vertices):
-    x_min = min(vertices[0][0], vertices[1][0], vertices[2][0], vertices[3][0])
-    x_max = max(vertices[0][0], vertices[1][0], vertices[2][0], vertices[3][0])
-    y_min = min(vertices[0][1], vertices[1][1], vertices[2][1], vertices[3][1])
-    y_max = max(vertices[0][1], vertices[1][1], vertices[2][1], vertices[3][1])
-    return x_min <= x <= x_max and y_min <= y <= y_max
-
-#### Check if point is inside hexagon ####
-def is_point_inside_hexagon(x, y , center_x, center_y, side_length):
-    cx, cy = center_x, center_y
-    vertices = []
-    angle_deg = 60
-    angle_rad = math.radians(angle_deg)
-    for i in range(6):
-        px = cx + side_length * math.cos(angle_rad * i + math.radians(30))
-        py = cy + side_length * math.sin(angle_rad * i + math.radians(30))
-        vertices.append((px, py))
-    odd_nodes = False
-    j = 5
-    for i in range(6):
-        if (vertices[i][1] < y and vertices[j][1] >= y) or (vertices[j][1] < y and vertices[i][1] >= y):
-            if (vertices[i][0] + (y - vertices[i][1]) / (vertices[j][1] - vertices[i][1]) * (vertices[j][0] - vertices[i][0])) < x:
-                odd_nodes = not odd_nodes
-        j = i
-    return odd_nodes
-#### Check if point is inside C-Block ####
-def is_point_inside_block(point, vertices):
-    odd_nodes = False
-    j = len(vertices) - 1
-    for i in range(len(vertices)):
-        if (vertices[i][1] < point[1] and vertices[j][1] >= point[1]) or (vertices[j][1] < point[1] and vertices[i][1] >= point[1]):
-            if (vertices[i][0] + (point[1] - vertices[i][1]) / (vertices[j][1] - vertices[i][1]) * (vertices[j][0] - vertices[i][0])) < point[0]:
-                odd_nodes = not odd_nodes
-        j = i
-    return odd_nodes
-
-#### Define the COnfiguration Space ####
-def Configuration_space(width,height):
+def Configuration_space(width,height, robot_radius):
     obs_space = np.full((height, width),0)
     
     for y in range(0, height) :
         for x in range(0, width):
             
-            rect_1_1_buffer = (x + 5) - 50  
-            rect_1_2_buffer = (y + 5) - 50
-            rect_1_3_buffer = (x - 5) - 87.5
-            rect_1_3_bffer = (y - 5) - 250    
+            rect_1_1_buffer = (x + 5 + robot_radius) - 50  
+            rect_1_2_buffer = (y + 5 + robot_radius) - 50
+            rect_1_3_buffer = (x - 5 - robot_radius) - 87.5
+            rect_1_3_bffer = (y - 5 - robot_radius) - 250    
 
-            rect_2_1_buffer = (x + 5) - 137.5  
-            rect_2_2_buffer = (y + 5) - 0  
-            rect_2_3_buffer = (x - 5) - 175
-            rect_2_4_buffer = (y - 5) - 200 
+            rect_2_1_buffer = (x + 5 + robot_radius) - 137.5  
+            rect_2_2_buffer = (y + 5 + robot_radius) - 0  
+            rect_2_3_buffer = (x - 5 - robot_radius) - 175
+            rect_2_4_buffer = (y - 5 - robot_radius) - 200 
      
-            hexagon_6_b = (y + 5) + 0.58*(x + 5) - 237.549
-            hexagon_5_b = (y + 5) - 0.58*(x - 5) + 137.501
-            hexagon_4_b = (x - 6.5) - 389.95
-            hexagon_3_b = (y - 5) + 0.58*(x - 5) - 387.501
-            hexaagon_2_b = (y - 5) - 0.58*(x + 5) - 12.46
-            hexagon_1_b = (x + 6.5) - 260.05
+            hexagon_6_b = (y + 5 + robot_radius) + 0.58*(x + 5 +robot_radius) - 237.549
+            hexagon_5_b = (y + 5 + robot_radius) - 0.58*(x - 5 - robot_radius) + 137.501
+            hexagon_4_b = (x - 6.5 - robot_radius) - 389.95
+            hexagon_3_b = (y - 5 - robot_radius) + 0.58*(x - 5 - robot_radius) - 387.501
+            hexaagon_2_b = (y - 5 - robot_radius) - 0.58*(x + 5 + robot_radius) - 12.46
+            hexagon_1_b = (x + 6.5 + robot_radius) - 260.05
        
-            temp1_b = (x + 5) - 225
-            temp2_b = (x + 5) - 510
-            temp3_b = (x - 5) - 550
-            temp4_b = (y + 5) - 25
-            temp5_b = (y - 5) - 62.5
-            temp6_b = (y + 5) - 187.5
-            temp7_b = (y - 5) - 225
+            temp1_b = (x + 5 + robot_radius) - 225
+            temp2_b = (x + 5 + robot_radius) - 510
+            temp3_b = (x - 5 - robot_radius) - 550
+            temp4_b = (y + 5 + robot_radius) - 25
+            temp5_b = (y - 5 - robot_radius) - 62.5
+            temp6_b = (y + 5 + robot_radius) - 187.5
+            temp7_b = (y - 5 - robot_radius) - 225
            
             if((temp1_b>0 and temp2_b<0 and temp4_b>0 and temp5_b<0) or(temp2_b>0 and temp3_b<0 and temp4_b>0 and temp7_b<0) or (temp6_b>0 and temp7_b<0 and temp1_b>0 and temp2_b<0) or (rect_1_1_buffer>0 and rect_1_2_buffer>0 and rect_1_3_buffer<0 and rect_1_3_bffer<0) or (rect_2_1_buffer>0 and rect_2_3_buffer<0 and rect_2_4_buffer<0 and rect_2_2_buffer>0) or (hexagon_6_b>0 and hexagon_5_b>0 and hexagon_4_b<0 and hexagon_3_b<0 and hexaagon_2_b<0 and hexagon_1_b>0)):
                 obs_space[y, x] = 1
@@ -381,10 +343,11 @@ def frames_to_video(frames_dir, output_video):
 
 
 if __name__ == '__main__':
-    width = 1200
-    height = 500
+    width = 600
+    height = 250
+    robot_radius = 5
     print("Wait few seconds for the input prompt...")
-    obs_space = Configuration_space(width, height)
+    obs_space = Configuration_space(width, height, robot_radius)
     
     # Taking start and end node coordinates as input from the user
     start_input_x = input("Enter the Start X: ")
