@@ -13,9 +13,10 @@ import cv2
 ########## DEFINING A NODE CLASS TO STORE NODES AS OBJECTS ###############
 
 class Node:
-    def __init__(self, x, y, cost, parent_id):
+    def __init__(self, x, y, theta, cost, parent_id):
         self.x = x
         self.y = y
+        self.theta = theta
         self.cost = cost
         self.parent_id = parent_id
     
@@ -25,53 +26,50 @@ class Node:
 ########### DEFINING ACTIONS TO BE PERFORMED ##############
 ########### CALCULATING COST TO COME FOR ALL ACTIONS ########
 
-def up(x, y, cost):
-    x = x
-    y = y + 1
-    cost = cost + 1
-    return x, y, cost
+def move_60up(x, y, theta, step_size, cost):
+    theta_rad = np.radians(theta)
+    new_x = x + step_size * np.cos(theta_rad + np.radians(60))
+    new_y = y + step_size * np.sin(theta_rad + np.radians(60))
+    new_x = round(new_x)
+    new_y = round(new_y)
+    cost = 1 + cost
+    return new_x, new_y, theta + 60, cost
 
-def down(x, y, cost):
-    x = x
-    y = y - 1
-    cost = cost + 1
-    return x, y, cost
+def move_30up(x, y, theta, step_size, cost):
+    theta_rad = np.radians(theta)
+    new_x = x + step_size * np.cos(theta_rad + np.radians(30))
+    new_y = y + step_size * np.sin(theta_rad + np.radians(30))
+    new_x = round(new_x)
+    new_y = round(new_y)
+    cost = 1 + cost
+    return new_x, new_y, theta + 30, cost
 
-def left(x, y, cost):
-    x = x - 1
-    y = y
-    cost = cost + 1
-    return x, y, cost
+def move_0(x, y, theta, step_size, cost):
+    theta_rad = np.radians(theta)
+    new_x = x + step_size * np.cos(theta_rad)
+    new_y = y + step_size * np.sin(theta_rad)
+    new_x = round(new_x)
+    new_y = round(new_y)
+    cost = 1 + cost
+    return new_x, new_y, theta, cost
 
-def right(x, y, cost):
-    x = x + 1
-    y = y
-    cost = cost + 1
-    return x, y, cost
+def move_30down(x, y, theta, step_size, cost):
+    theta_rad = np.radians(theta)
+    new_x = x + step_size * np.cos(theta_rad - np.radians(30))
+    new_y = y + step_size * np.sin(theta_rad - np.radians(30))
+    new_x = round(new_x)
+    new_y = round(new_y)
+    cost = 1 + cost
+    return new_x, new_y, theta - 30, cost
 
-def bottom_left(x, y, cost):
-    x = x - 1
-    y = y - 1
-    cost = cost + 1.4
-    return x, y, cost
-
-def bottom_right(x, y, cost):
-    x = x + 1
-    y = y - 1
-    cost = cost + 1.4
-    return x, y, cost
-
-def up_left(x, y, cost):
-    x = x - 1
-    y = y + 1
-    cost = cost + 1.4
-    return x, y, cost
-
-def up_right(x, y, cost):
-    x = x + 1
-    y = y + 1
-    cost = cost + 1.4
-    return x, y, cost
+def move_60down(x, y, theta, step_size, cost):
+    theta_rad = np.radians(theta)
+    new_x = x + step_size * np.cos(theta_rad - np.radians(60))
+    new_y = y + step_size * np.sin(theta_rad - np.radians(60))
+    new_x = round(new_x)
+    new_y = round(new_y)
+    cost = 1 + cost
+    return new_x, new_y, theta - 60, cost
 
 # Define a heuristic function for A*
 def heuristic(node, goal):
@@ -114,7 +112,6 @@ def Configuration_space(width,height, robot_radius):
            
             if((temp1_b>0 and temp2_b<0 and temp4_b>0 and temp5_b<0) or(temp2_b>0 and temp3_b<0 and temp4_b>0 and temp7_b<0) or (temp6_b>0 and temp7_b<0 and temp1_b>0 and temp2_b<0) or (rect_1_1_buffer>0 and rect_1_2_buffer>0 and rect_1_3_buffer<0 and rect_1_3_bffer<0) or (rect_2_1_buffer>0 and rect_2_3_buffer<0 and rect_2_4_buffer<0 and rect_2_2_buffer>0) or (hexagon_6_b>0 and hexagon_5_b>0 and hexagon_4_b<0 and hexagon_3_b<0 and hexaagon_2_b<0 and hexagon_1_b>0)):
                 obs_space[y, x] = 1
-             
              
             
             winidow_1 = (y) - 5
@@ -185,11 +182,11 @@ def is_goal(present, goal):
 
 
 # A* algorithm implementation
-def astar(start_node, goal_node, obs_space):
+def astar(start_node, goal_node, obs_space, theta, step_size):
     if is_goal(start_node, goal_node):
         return None, 1
 
-    possible_moves = [up, down, left, right, bottom_left, bottom_right, up_left, up_right]
+    possible_moves = [move_30up, move_30down, move_0, move_60down, move_60up]
     open_nodes = {(start_node.x, start_node.y): start_node}
     closed_nodes = {}
     priority_queue = []
@@ -212,8 +209,8 @@ def astar(start_node, goal_node, obs_space):
 
         closed_nodes[current_node_coords] = current_node
         for move in possible_moves:
-            x, y, cost = move(current_node.x, current_node.y, current_node.cost)
-            new_node = Node(x, y, cost, current_node)
+            new_x, new_y, new_theta, new_cost = move(current_node.x, current_node.y, current_node.theta, step_size, current_node.cost)
+            new_node = Node(new_x, new_y, new_theta, new_cost, current_node)
             new_node_coords = (new_node.x, new_node.y)
 
             if is_valid(new_node.x, new_node.y, obs_space) and new_node_coords not in closed_nodes:
@@ -222,6 +219,8 @@ def astar(start_node, goal_node, obs_space):
                     if new_node_cost < open_nodes[new_node_coords].cost + heuristic(open_nodes[new_node_coords], goal_node):
                         open_nodes[new_node_coords].cost = new_node.cost
                         open_nodes[new_node_coords].parent_id = new_node.parent_id
+                        # Update the priority queue
+                        heapq.heappush(priority_queue, [new_node_cost, open_nodes[new_node_coords]])
                 else:
                     open_nodes[new_node_coords] = new_node
                     heapq.heappush(priority_queue, [new_node_cost, new_node])
@@ -318,8 +317,8 @@ def plot_path(start_node, goal_node, x_path, y_path, all_nodes, frame_rate):
         for node in all_nodes:
             pygame.draw.rect(screen, (190, 190, 0), (node[0], 250 - node[1], 1, 1))  # Invert y-axis for explored nodes
             frame_count += 1
-            if frame_count % 250 == 0:  # Save frame every 100th frame
-                pygame.image.save(screen, os.path.join("frames", f"frame_{frame_count}.png"))
+            # 3if frame_count % 250 == 0:  # Save frame every 100th frame
+            pygame.image.save(screen, os.path.join("frames", f"frame_{frame_count}.png"))
             pygame.display.update()
 
         for i in range(len(x_path) - 1):
@@ -356,27 +355,41 @@ if __name__ == '__main__':
     obs_space = Configuration_space(width, height, robot_radius)
     
     # Taking start and end node coordinates as input from the user
-    start_input_x = input("Enter the Start X: ")
-    start_input_y = input("Enter the Start Y: ")
+    # start_input_x = input("Enter the Start X: ")
+    # start_input_y = input("Enter the Start Y: ")
 
-    start_x = int(start_input_x)
-    start_y = int(start_input_y)
+    # start_x = int(start_input_x)
+    # start_y = int(start_input_y)
 
-    end_input_x = input("Enter the End X: ")
-    end_input_y = input("Enter the End Y: ")
+    # # end_input_x = input("Enter the End X: ")
+    # # end_input_y = input("Enter the End Y: ")
 
-    end_x = int(end_input_x)
-    end_y = int(end_input_y)
+    # end_x = int(end_input_x)
+    # end_y = int(end_input_y)
+
+    start_x = 10
+    start_y = 10
+
+    # end_input_x = input("Enter the End X: ")
+    # end_input_y = input("Enter the End Y: ")
+
+    end_x = 200
+    end_y = 200
+
+    # Ask user for theta and step size
+    theta = float(input("Enter the angle theta: "))
+    step_size = float(input("Enter the step size: "))
 
     # Define start and goal nodes
-    start_point = Node(start_x, start_y, 0, -1)  # Start node with cost 0 and no parent
-    goal_point = Node(end_x, end_y, 0, -1)  # You can adjust the goal node coordinates as needed
+    start_point = Node(start_x, start_y, theta, 0, -1)  # Start node with cost 0 and no parent
+    goal_point = Node(end_x, end_y, theta, 0, -1)  # You can adjust the goal node coordinates as needed
 
     save_dir = "frames"
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     timer_begin = time.time()
-    traversed_nodes, goal_found = astar(start_point, goal_point, obs_space)
+    # Pass theta and step_size to astar function
+    traversed_nodes, goal_found = astar(start_point, goal_point, obs_space, theta, step_size)
     timer_end = time.time()
     print("Time taken to explore:", timer_end - timer_begin, "seconds")
 
@@ -384,10 +397,15 @@ if __name__ == '__main__':
         x_path, y_path = backtrack(goal_point)
         optimal_cost = goal_point.cost  # Cost of the optimal path
         print("Optimal path cost:", optimal_cost)
-        plot_path(start_point, goal_point, x_path, y_path, traversed_nodes, frame_rate=30)
+        plot_path(start_point, goal_point, x_path, y_path, traversed_nodes, frame_rate=60)
         output_video = "output_video.mp4"
         print("Generating Video")
         frames_to_video(save_dir, output_video)
         print("Video created successfully!")
     else:
         print("Goal not found!")
+        
+
+
+
+
