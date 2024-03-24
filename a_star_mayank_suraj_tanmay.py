@@ -1,6 +1,6 @@
 
 #!/usr/bin/env python3
-# Github repository:  https://github.com/MayankD409/Dijkstra_Point_Robot.git
+# Github repository:  https://github.com/MayankD409/A_star_algorithm_on_rigid_robot.git
 
 import pygame
 import numpy as np
@@ -13,154 +13,162 @@ import cv2
 ########## DEFINING A NODE CLASS TO STORE NODES AS OBJECTS ###############
 
 class Node:
-    def __init__(self, x, y, theta, cost, parent_id):
+    def __init__(self, x, y, theta, cost, parent_id, c2g = 0):
         self.x = x
         self.y = y
         self.theta = theta
         self.cost = cost
         self.parent_id = parent_id
-    
-    def __lt__(self, other):
-        return self.cost < other.cost
+        self.c2g = c2g 
+        
+        
+    def __lt__(self,other):
+        return self.cost + self.c2g < other.cost + other.c2g
 
 ########### DEFINING ACTIONS TO BE PERFORMED ##############
 ########### CALCULATING COST TO COME FOR ALL ACTIONS ########
 
-def move_60up(x, y, theta, step_size, cost):
-    theta_rad = np.radians(theta)
-    new_x = x + step_size * np.cos(theta_rad + np.radians(60))
-    new_y = y + step_size * np.sin(theta_rad + np.radians(60))
-    new_x = round(new_x)
-    new_y = round(new_y)
+def move_60up(x,y,theta,step_size, cost):
+    theta = theta + 60
+    x = x + (step_size*np.cos(np.radians(theta)))
+    y = y + (step_size*np.sin(np.radians(theta)))
+    #x = round(x*2)/2
+    #y = round(y*2)/2
+    x = round(x)
+    y = round(y)
     cost = 1 + cost
-    return new_x, new_y, theta + 60, cost
+    return x,y,theta,cost
 
-def move_30up(x, y, theta, step_size, cost):
-    theta_rad = np.radians(theta)
-    new_x = x + step_size * np.cos(theta_rad + np.radians(30))
-    new_y = y + step_size * np.sin(theta_rad + np.radians(30))
-    new_x = round(new_x)
-    new_y = round(new_y)
+def move_30up(x,y,theta, step_size, cost):
+    theta = theta + 30
+    x = x + (step_size*np.cos(np.radians(theta)))
+    y = y + (step_size*np.sin(np.radians(theta)))
+    #x = round(x*2)/2
+    #y = round(y*2)/2
+    x = round(x)
+    y = round(y)
     cost = 1 + cost
-    return new_x, new_y, theta + 30, cost
+    return x,y,theta, cost
 
-def move_0(x, y, theta, step_size, cost):
-    theta_rad = np.radians(theta)
-    new_x = x + step_size * np.cos(theta_rad)
-    new_y = y + step_size * np.sin(theta_rad)
-    new_x = round(new_x)
-    new_y = round(new_y)
+def move_0(x,y,theta, step_size, cost):
+    theta = theta + 0
+    x = x + (step_size*np.cos(np.radians(theta)))
+    y = y + (step_size*np.sin(np.radians(theta)))
+    #x = round(x*2)/2
+    #y = round(y*2)/2
+    x = round(x)
+    y = round(y)
     cost = 1 + cost
-    return new_x, new_y, theta, cost
+    return x,y,theta, cost
 
-def move_30down(x, y, theta, step_size, cost):
-    theta_rad = np.radians(theta)
-    new_x = x + step_size * np.cos(theta_rad - np.radians(30))
-    new_y = y + step_size * np.sin(theta_rad - np.radians(30))
-    new_x = round(new_x)
-    new_y = round(new_y)
+def move_30down(x,y,theta, step_size, cost):
+    theta = theta - 30
+    x = x + (step_size*np.cos(np.radians(theta)))
+    y = y + (step_size*np.sin(np.radians(theta)))
+    #x = round(x*2)/2
+    #y = round(y*2)/2
+    x = round(x)
+    y = round(y)
     cost = 1 + cost
-    return new_x, new_y, theta - 30, cost
+    return x,y,theta, cost
 
-def move_60down(x, y, theta, step_size, cost):
-    theta_rad = np.radians(theta)
-    new_x = x + step_size * np.cos(theta_rad - np.radians(60))
-    new_y = y + step_size * np.sin(theta_rad - np.radians(60))
-    new_x = round(new_x)
-    new_y = round(new_y)
+def move_60down(x,y,theta, step_size, cost):
+    theta = theta - 60
+    x = x + (step_size*np.cos(np.radians(theta)))
+    y = y + (step_size*np.sin(np.radians(theta)))
+    #x = round(x*2)/2
+    #y = round(y*2)/2
+    x = round(x)
+    y = round(y)
     cost = 1 + cost
-    return new_x, new_y, theta - 60, cost
-
-# Define a heuristic function for A*
-def heuristic(node, goal):
-    # Using Euclidean distance as the heuristic
-    dx = node.x - goal.x
-    dy = node.y - goal.y
-    return math.sqrt(dx*dx + dy*dy)
+    return x,y,theta,cost
 
 ############ CONFIGURATION SPACE CONSTRUCTION WITH OBSTACLES ############
-def Configuration_space(width,height, robot_radius):
-    obs_space = np.full((height, width),0)
-    
-    for y in range(0, height) :
-        for x in range(0, width):
-            
-            rect_1_1_buffer = (x + 5 + robot_radius) - 50  
-            rect_1_2_buffer = (y + 5 + robot_radius) - 50
-            rect_1_3_buffer = (x - 5 - robot_radius) - 87.5
-            rect_1_3_bffer = (y - 5 - robot_radius) - 250    
+#### Check if point is inside Rectangle ####
+def is_point_inside_rectangle(x, y, vertices):
+    x_min = min(vertices[0][0], vertices[1][0], vertices[2][0], vertices[3][0])
+    x_max = max(vertices[0][0], vertices[1][0], vertices[2][0], vertices[3][0])
+    y_min = min(vertices[0][1], vertices[1][1], vertices[2][1], vertices[3][1])
+    y_max = max(vertices[0][1], vertices[1][1], vertices[2][1], vertices[3][1])
+    return x_min <= x <= x_max and y_min <= y <= y_max
 
-            rect_2_1_buffer = (x + 5 + robot_radius) - 137.5  
-            rect_2_2_buffer = (y + 5 + robot_radius) - 0  
-            rect_2_3_buffer = (x - 5 - robot_radius) - 175
-            rect_2_4_buffer = (y - 5 - robot_radius) - 200 
-     
-            hexagon_6_b = (y + 5 + robot_radius) + 0.58*(x + 5 +robot_radius) - 237.549
-            hexagon_5_b = (y + 5 + robot_radius) - 0.58*(x - 5 - robot_radius) + 137.501
-            hexagon_4_b = (x - 6.5 - robot_radius) - 389.95
-            hexagon_3_b = (y - 5 - robot_radius) + 0.58*(x - 5 - robot_radius) - 387.501
-            hexaagon_2_b = (y - 5 - robot_radius) - 0.58*(x + 5 + robot_radius) - 12.46
-            hexagon_1_b = (x + 6.5 + robot_radius) - 260.05
-       
-            temp1_b = (x + 5 + robot_radius) - 225
-            temp2_b = (x + 5 + robot_radius) - 510
-            temp3_b = (x - 5 - robot_radius) - 550
-            temp4_b = (y + 5 + robot_radius) - 25
-            temp5_b = (y - 5 - robot_radius) - 62.5
-            temp6_b = (y + 5 + robot_radius) - 187.5
-            temp7_b = (y - 5 - robot_radius) - 225
-           
-            if((temp1_b>0 and temp2_b<0 and temp4_b>0 and temp5_b<0) or(temp2_b>0 and temp3_b<0 and temp4_b>0 and temp7_b<0) or (temp6_b>0 and temp7_b<0 and temp1_b>0 and temp2_b<0) or (rect_1_1_buffer>0 and rect_1_2_buffer>0 and rect_1_3_buffer<0 and rect_1_3_bffer<0) or (rect_2_1_buffer>0 and rect_2_3_buffer<0 and rect_2_4_buffer<0 and rect_2_2_buffer>0) or (hexagon_6_b>0 and hexagon_5_b>0 and hexagon_4_b<0 and hexagon_3_b<0 and hexaagon_2_b<0 and hexagon_1_b>0)):
+#### Check if point is inside hexagon ####
+def is_point_inside_hexagon(x, y , center_x, center_y, side_length):
+    cx, cy = center_x, center_y
+    vertices = []
+    angle_deg = 60
+    angle_rad = math.radians(angle_deg)
+    for i in range(6):
+        px = cx + side_length * math.cos(angle_rad * i + math.radians(30))
+        py = cy + side_length * math.sin(angle_rad * i + math.radians(30))
+        vertices.append((px, py))
+    odd_nodes = False
+    j = 5
+    for i in range(6):
+        if (vertices[i][1] < y and vertices[j][1] >= y) or (vertices[j][1] < y and vertices[i][1] >= y):
+            if (vertices[i][0] + (y - vertices[i][1]) / (vertices[j][1] - vertices[i][1]) * (vertices[j][0] - vertices[i][0])) < x:
+                odd_nodes = not odd_nodes
+        j = i
+    return odd_nodes
+#### Check if point is inside C-Block ####
+def is_point_inside_block(point, vertices):
+    odd_nodes = False
+    j = len(vertices) - 1
+    for i in range(len(vertices)):
+        if (vertices[i][1] < point[1] and vertices[j][1] >= point[1]) or (vertices[j][1] < point[1] and vertices[i][1] >= point[1]):
+            if (vertices[i][0] + (point[1] - vertices[i][1]) / (vertices[j][1] - vertices[i][1]) * (vertices[j][0] - vertices[i][0])) < point[0]:
+                odd_nodes = not odd_nodes
+        j = i
+    return odd_nodes
+
+#### Define the COnfiguration Space ####
+def Configuration_space(width,height, robot_radius, clearance):
+    obs_space = np.full((height,width),0)
+    
+    for y in range(height) :
+        for x in range(width):
+            
+            ####### CLEARANCE FOR THE OBSTACLES #######
+            point = [x, y]
+            # Plotting Buffer Space for the Obstacles    
+            rectangle1_buffer_vts = [(50-(robot_radius + clearance), 250), (87.5+(robot_radius + clearance), 250), (87.5+(robot_radius + clearance), 50-(robot_radius + clearance)), (50-(robot_radius + clearance), 50-(robot_radius + clearance))]
+            rectangle2_buffer_vts = [(137.5-(robot_radius + clearance), 200+(robot_radius + clearance)), (175+(robot_radius + clearance), 200-(robot_radius + clearance)), (175+(robot_radius + clearance), 0), (137.5-(robot_radius + clearance), 0)]
+            cblock_buffer_vts = [(450-(robot_radius + clearance), 225+(robot_radius + clearance)), (450-(robot_radius + clearance), 187.5-(robot_radius + clearance)), (510-(robot_radius + clearance), 187.5-(robot_radius + clearance)), (510-(robot_radius + clearance), 62.5+(robot_radius + clearance)), (450-(robot_radius + clearance), 62.5+(robot_radius + clearance)), 
+                                 (450-(robot_radius + clearance), 25-(robot_radius + clearance)), (550+(robot_radius + clearance), 25-(robot_radius + clearance)), (550+(robot_radius + clearance), 225+(robot_radius + clearance))]
+
+            rect1_buffer = is_point_inside_rectangle(x, y, rectangle1_buffer_vts)
+            rect2_buffer = is_point_inside_rectangle(x, y, rectangle2_buffer_vts)
+            hexa_buffer = is_point_inside_hexagon(x, y, 325, 125, 75+(robot_radius + clearance))
+            cblock_buffer = is_point_inside_block(point, cblock_buffer_vts)
+            
+            # Setting the line constrain to obtain the obstacle space with buffer
+            if(cblock_buffer or rect1_buffer or rect2_buffer or hexa_buffer):
                 obs_space[y, x] = 1
              
-            
-            winidow_1 = (y) - 5
-            window_2 = (y) - 495
-            window_3 = (x) - 5
-            window_4 = (x) - 1195 
+            # Plotting Actual Object Space Half Plane Equations
+            rectangle1_vts = [(50, 250), (87.5, 250), (87.5, 50), (50, 50)]
+            rectangle2_vts = [(137.5, 200), (175, 200), (175, 0), (137.5, 0)]
+            cblock_vertices = [(450, 225), (450, 187.5), (510, 187.5), (510, 62.5), (450, 62.5), (450, 25), (550, 25), (550, 225)]
 
-           
-            rect_2_1 = (x) - 137.5  
-            rect_2_2 = (y) - 0
-            rect_2_4 = (x) - 175
-            rect_2_3 = (y) - 200 
-           
-            rect_11 = (x) - 50  
-            rect_12 = (y) - 50
-            rect_13 = (x) - 87.5
-            rect_14 = (y) - 250
-            
-          
-            h6 = (y) + 0.58*(x) - 237.549
-            h5 = (y) - 0.58*(x) + 137.501
-            h4 = (x) - 389.95
-            h3 = (y) + 0.58*(x) - 387.501
-            h2 = (y) - 0.58*(x) - 12.46
-            h1 = (x) - 260.05 
-            
-        
-            t1 = (x) - 450
-            t2 = (x) - 510
-            t3 = (x) - 550
-            t4 = (y) - 25
-            t5 = (y) - 62.5
-            t6 = (y) - 187.5
-            t7 = (y) - 225
+            rect1 = is_point_inside_rectangle(x, y, rectangle1_vts)
+            rect2 = is_point_inside_rectangle(x, y, rectangle2_vts)
+            hexa = is_point_inside_hexagon(x, y, 325, 125, 75)
+            cblock = is_point_inside_block(point, cblock_vertices)
 
-          
-            if((h6>0 and h5>0 and h4<0 and h3<0 and h2<0 and h1>0) or (rect_11>0 and rect_12>0 and rect_13<0 and rect_14<0 ) or (rect_2_1>0  and rect_2_3<0 and rect_2_4<0 and rect_2_2>0) or (t1>0 and t2<0 and t4>0 and t5<0) or (t2>0 and t3<0 and t4>0 and t7<0) or (t6>0 and t7<0 and t1>0 and t2<0) or (winidow_1<0) or (window_2>0) or (window_3<0) or (window_4>0)):
+            # Setting the line constrain to obtain the obstacle space with buffer
+            if(cblock or rect1 or rect2 or hexa):
                 obs_space[y, x] = 2
                 
     ####### CLEARANCE FOR THE WALLS ########
     for i in range(height):
-        for j in range(6):
+        for j in range(3+(robot_radius + clearance)):
             obs_space[i][j] = 1
             obs_space[i][width - j - 1] = 1
-    
+
     for i in range(width):
-        for j in range(6):  # Mark the first 5 columns of the top and bottom boundaries as unreachable
+        for j in range(3+(robot_radius + clearance)):  
             obs_space[j][i] = 1
-            obs_space[height - j - 1][i] = 1  # Also mark the first 5 columns of the bottom boundary as unreachable
+            obs_space[height - j - 1][i] = 1 
 
     return obs_space
 
@@ -168,64 +176,82 @@ def Configuration_space(width,height, robot_radius):
 
 def is_valid(x, y, obs_space):
     height, width = obs_space.shape
-    if x < 0 or x >= width or y < 0 or y >= height or obs_space[y][x] == 1 or obs_space[y][x] == 2:
+    
+    # Check if coordinates are within the boundaries of the obstacle space and if the cell is occupied by an obstacle (value 1 or 2)
+    if x < 0 or x >= width or y < 0 or y >= height or obs_space[y][x] == 1  or obs_space[y][x]==2:
         return False
+    
     return obs_space[y, x] == 0
 
 ############## CHECK IF THE GOAL NODE IS REACHED ###############
-
+def euclidean_distance(point1, point2):
+    return math.sqrt((point2[0] - point1[0]) ** 2 + (point2[1] - point1[1]) ** 2)
+################################################################
 def is_goal(present, goal):
-    if (present.x == goal.x) and (present.y == goal.y):
+
+    dt = euclidean_distance((present.x, present.y), (goal.x, goal.y))             
+
+    if dt <= 1.5:
         return True
     else:
         return False
-
-
-# A* algorithm implementation
-def astar(start_node, goal_node, obs_space, theta, step_size):
-    if is_goal(start_node, goal_node):
+    
+############# D-STAR ALGORITHM ###############
+def a_star(start_position, goal_position, obstacle_space, step_size):                       
+    if is_goal(start_position, goal_position):
         return None, 1
 
-    possible_moves = [move_30up, move_30down, move_0, move_60down, move_60up]
-    open_nodes = {(start_node.x, start_node.y): start_node}
-    closed_nodes = {}
-    priority_queue = []
-    heapq.heappush(priority_queue, [start_node.cost + heuristic(start_node, goal_node), start_node])
-
-    traversed_nodes = []
+    goal = goal_position
+    start = start_position
     
-    while priority_queue:
-        current_node = heapq.heappop(priority_queue)[1]
-        traversed_nodes.append([current_node.x, current_node.y])
-        current_node_coords = (current_node.x, current_node.y)
-
-        if is_goal(current_node, goal_node):
-            goal_node.parent_id, goal_node.cost = current_node.parent_id, current_node.cost
+    moves = [move_60up, move_30up, move_0, move_60down, move_30down]   
+    unexplored = {}  # Dictionary of all unexplored nodes
+    
+    start_coords = (start.x, start.y)  # Generating a unique key for identifying the node
+    unexplored[start_coords] = start
+    
+    explored = {}  # Dictionary of all explored nodes
+    all_nodes = []  # Stores all nodes that have been traversed, for visualization purposes.
+    
+    visited = set()  # Set to keep track of visited coordinates
+    
+    while unexplored:
+        # Select the node with the lowest combined cost and heuristic estimate
+        present_coords = min(unexplored, key=lambda k: unexplored[k].cost + unexplored[k].c2g)
+        present_node = unexplored.pop(present_coords)
+        
+        all_nodes.append([present_node.x, present_node.y, present_node.theta])
+        
+        if is_goal(present_node, goal):
+            goal.parent_id = present_node.parent_id
+            goal.cost = present_node.cost
             print("Goal Node found")
-            return traversed_nodes, 1
+            return all_nodes, 1
 
-        if current_node_coords in closed_nodes:
-            continue
+        explored[present_coords] = present_node
 
-        closed_nodes[current_node_coords] = current_node
-        for move in possible_moves:
-            new_x, new_y, new_theta, new_cost = move(current_node.x, current_node.y, current_node.theta, step_size, current_node.cost)
-            new_node = Node(new_x, new_y, new_theta, new_cost, current_node)
-            new_node_coords = (new_node.x, new_node.y)
+        for move in moves:
+            x, y, theta, cost = move(present_node.x, present_node.y, present_node.theta, step_size, present_node.cost)
+            c2g = euclidean_distance((x, y), (goal.x, goal.y))  
+   
+            new_node = Node(x, y, theta, cost, present_node, c2g)   
+            new_coords = (new_node.x, new_node.y)
+   
+            if not is_valid(new_node.x, new_node.y, obstacle_space) or new_coords in explored:
+                continue
+            
+            if new_coords in visited:
+                # Skip adding the node if its coordinates have already been visited
+                continue
+            
+            if new_coords not in unexplored:
+                unexplored[new_coords] = new_node
+                visited.add(new_coords)  # Add the new coordinates to the visited set
+            elif new_node.cost < unexplored[new_coords].cost:
+                unexplored[new_coords] = new_node
+   
+    return all_nodes, 0
 
-            if is_valid(new_node.x, new_node.y, obs_space) and new_node_coords not in closed_nodes:
-                new_node_cost = new_node.cost + heuristic(new_node, goal_node)
-                if new_node_coords in open_nodes:
-                    if new_node_cost < open_nodes[new_node_coords].cost + heuristic(open_nodes[new_node_coords], goal_node):
-                        open_nodes[new_node_coords].cost = new_node.cost
-                        open_nodes[new_node_coords].parent_id = new_node.parent_id
-                        # Update the priority queue
-                        heapq.heappush(priority_queue, [new_node_cost, open_nodes[new_node_coords]])
-                else:
-                    open_nodes[new_node_coords] = new_node
-                    heapq.heappush(priority_queue, [new_node_cost, new_node])
-
-    return traversed_nodes, 0
 
 
 
@@ -247,6 +273,31 @@ def backtrack(goal_node):
     y_path.reverse()
     
     return x_path,y_path
+
+def is_valid_line(start, end, obs_space):
+    # Bresenham's line algorithm to check for intersection between line segment and obstacles
+    x0, y0 = start
+    x1, y1 = end
+    dx = abs(x1 - x0)
+    dy = abs(y1 - y0)
+    sx = -1 if x0 > x1 else 1
+    sy = -1 if y0 > y1 else 1
+    err = dx - dy
+
+    while True:
+        if obs_space[y0][x0] == 1 or obs_space[y0][x0] == 2:  # Check for obstacle intersection
+            return False
+        if x0 == x1 and y0 == y1:
+            break
+        e2 = 2 * err
+        if e2 > -dy:
+            err -= dy
+            x0 += sx
+        if e2 < dx:
+            err += dx
+            y0 += sy
+
+    return True
 
 #########  PLOT OBSTACLES SPACE, EXPLORED NODES, SHORTEST PATH  #######
 
@@ -271,14 +322,19 @@ def draw_C(screen, color):
     vertices = [(450, 225), (450, 187.5), (510, 187.5), (510, 62.5), (450, 62.5), (450, 25), (550, 25), (550, 225)]
     pygame.draw.polygon(screen, color, vertices)
 
-def plot_path(start_node, goal_node, x_path, y_path, all_nodes, frame_rate):
+def draw_vector(screen, color, start, end):
+    BLUE = (0, 0, 255)
+    pygame.draw.line(screen, color, start, end, width=1)
+    pygame.draw.circle(screen, BLUE, end, 2)
+
+def plot_path(start_node, goal_node, x_path, y_path, all_nodes, clearance, frame_rate, step_size):
     BLUE = (0, 0, 255)
     RED = (255, 0, 0)
     WHITE = (255, 255, 255)
     LIGHT_GREY = (190, 190, 190)
     DARK_GREY = (100, 100, 100)
 
-    padding = 5
+    padding = clearance
     center_x, center_y = 325, 125
     side_length = 75
 
@@ -293,36 +349,38 @@ def plot_path(start_node, goal_node, x_path, y_path, all_nodes, frame_rate):
     # Counter to keep track of frames
 
     running = True
-    while running and frame_count < len(all_nodes) + len(x_path) - 1:  # Terminate loop once all frames are saved
+    while running and frame_count < (len(all_nodes) + len(x_path) - 1)/2:  # Terminate loop once all frames are saved
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-        
         screen.fill(LIGHT_GREY)
         padding_rect = pygame.Rect(padding, padding, 600 - 2 * padding, 250 - 2 * padding)
         pygame.draw.rect(screen, WHITE, padding_rect)
         draw_padded_hexagon(screen, LIGHT_GREY, center_x, center_y, side_length, padding)
         draw_hexagon(screen, DARK_GREY, center_x, center_y, side_length)
-        cblock_vertices = [(447.5, 227.5), (447.5, 185), (507.5, 185), (507.5, 65), (447.5, 65), (447.5, 22.5), (552.5, 22.5), (552.5, 227.5)]
+        cblock_vertices = [(450-(clearance), 225+(clearance)), (450-(clearance), 187.5-(clearance)), (510-(clearance), 187.5-(clearance)), (510-(clearance), 62.5+(clearance)), (450-(clearance), 62.5+(clearance)), 
+                                 (450-(clearance), 25-(clearance)), (550+(clearance), 25-(clearance)), (550+(clearance), 225+(clearance))]
         pygame.draw.polygon(screen, LIGHT_GREY, cblock_vertices)
         draw_C(screen, DARK_GREY)
-        pygame.draw.rect(screen, LIGHT_GREY, pygame.Rect(47.5, 0, 42.5, 202.5)) # Rectangle1 Clearance 
-        pygame.draw.rect(screen, LIGHT_GREY, pygame.Rect(135, 47.5, 42.5, 202.5)) # Rectangle1 Obstacle 
-        pygame.draw.rect(screen, DARK_GREY, pygame.Rect(50, 0, 37.5, 200)) # Rectangle2 Clearance
+        pygame.draw.rect(screen, LIGHT_GREY, pygame.Rect(50-clearance, 0, 37.5+2*clearance, 200 + clearance)) # Rectangle1 Clearance 
+        pygame.draw.rect(screen, LIGHT_GREY, pygame.Rect(137.5-clearance, 50-clearance, 37.5+2*clearance, 200 + clearance)) # Rectangle2 Clearance 
+        pygame.draw.rect(screen, DARK_GREY, pygame.Rect(50, 0, 37.5, 200)) # Rectangle1 Obstacle
         pygame.draw.rect(screen, DARK_GREY, pygame.Rect(137.5, 50, 37.5, 200)) # Rectangle2 Obstacle
-
-        pygame.draw.rect(screen, RED, (start_node.x, 250 - start_node.y, 10, 10))  # Invert y-axis for start node
-        pygame.draw.rect(screen, RED, (goal_node.x, 250 - goal_node.y, 10, 10))  # Invert y-axis for goal node
-
-        for node in all_nodes:
-            pygame.draw.rect(screen, (190, 190, 0), (node[0], 250 - node[1], 1, 1))  # Invert y-axis for explored nodes
+        pygame.draw.rect(screen, RED, (start_node.x, 250 - start_node.y, 4, 4))  # Invert y-axis for start node
+        pygame.draw.rect(screen, RED, (goal_node.x, 250 - goal_node.y, 4, 4))  # Invert y-axis for goal node
+        for i in range(len(all_nodes) - 1):
+            current_node = all_nodes[i]
+            next_node = all_nodes[i + 1]
+            start = (current_node[0], 250 - current_node[1])  # Invert y-axis for current node
+            end = (current_node[0] + step_size * math.cos(math.radians(next_node[2])),
+                   250 - (current_node[1] + step_size * math.sin(math.radians(next_node[2]))))  # Calculate end point based on step size and direction
+            draw_vector(screen, (0, 255, 0), start, end)
             frame_count += 1
-            # 3if frame_count % 250 == 0:  # Save frame every 100th frame
-            pygame.image.save(screen, os.path.join("frames", f"frame_{frame_count}.png"))
+            if frame_count % 100 == 0:  # Save frame every 100th frame
+                pygame.image.save(screen, os.path.join("frames", f"frame_{frame_count}.png"))
             pygame.display.update()
-
         for i in range(len(x_path) - 1):
-            pygame.draw.line(screen, BLUE, (x_path[i], 250 - y_path[i]), (x_path[i + 1], 250 - y_path[i + 1]), width=4)
+            pygame.draw.line(screen, RED, (x_path[i], 250 - y_path[i]), (x_path[i + 1], 250 - y_path[i + 1]), width=4)
             pygame.image.save(screen, os.path.join("frames", f"frame_{frame_count}.png"))
             frame_count += 1
             pygame.display.update()
@@ -338,8 +396,8 @@ def frames_to_video(frames_dir, output_video):
     frames.sort(key=lambda x: int(x.split("_")[1].split(".")[0]))  # Sort frames by frame number
     frame = cv2.imread(os.path.join(frames_dir, frames[0]))
     height, width, layers = frame.shape
-    print("Creating Videowriter")
-    video = cv2.VideoWriter(output_video, cv2.VideoWriter_fourcc(*'mp4v'), 60, (width, height))
+    # print("Creating Videowriter")
+    video = cv2.VideoWriter(output_video, cv2.VideoWriter_fourcc(*'mp4v'), 35, (width, height))
     print("Writing Video")
     for frame in frames:
         video.write(cv2.imread(os.path.join(frames_dir, frame)))
@@ -347,65 +405,65 @@ def frames_to_video(frames_dir, output_video):
     cv2.destroyAllWindows()
     video.release()
 
+
 if __name__ == '__main__':
     width = 600
     height = 250
-    robot_radius = 5
-    print("Wait few seconds for the input prompt...")
-    obs_space = Configuration_space(width, height, robot_radius)
+    s_t = 30
+    g_t = 30
+    c2g = 0
     
     # Taking start and end node coordinates as input from the user
-    # start_input_x = input("Enter the Start X: ")
-    # start_input_y = input("Enter the Start Y: ")
+    CLEARANCE = int(input("Enter the desired CLEARANCE: "))
+    robot_radius = int(input("Enter the desired robot radius: "))
+    robot_step_size = int(input("Enter the desired step size (1 - 10): "))
+    print("Minimum x and y values will be addition of clearance (of wall) and robot radius:",CLEARANCE+robot_radius)
+    start_input_x = input("Enter the Start X: ")
+    start_input_y = input("Enter the Start Y: ")
+    start_theta = int(input("Enter the Theta_Start: "))
 
-    # start_x = int(start_input_x)
-    # start_y = int(start_input_y)
+    start_x = int(start_input_x)
+    start_y = int(start_input_y)
 
-    # # end_input_x = input("Enter the End X: ")
-    # # end_input_y = input("Enter the End Y: ")
+    end_input_x = input("Enter the End X: ")
+    end_input_y = input("Enter the End Y: ")
+    end_theta = int(input("Enter the Theta_End: "))
+    
+    end_x = int(end_input_x)
+    end_y = int(end_input_y)
+    
+    if start_theta % 30 != 0 or end_theta % 30 != 0:
+        print("Please enter valid theta values. Theta should be a multiple of 30 degrees.")
+        exit()
 
-    # end_x = int(end_input_x)
-    # end_y = int(end_input_y)
+    if robot_step_size < 1 or robot_step_size > 10:
+        print("Please enter a valid step size between 1 to 10 inclusive.")
+        exit()
 
-    start_x = 10
-    start_y = 10
-
-    # end_input_x = input("Enter the End X: ")
-    # end_input_y = input("Enter the End Y: ")
-
-    end_x = 200
-    end_y = 200
-
-    # Ask user for theta and step size
-    theta = float(input("Enter the angle theta: "))
-    step_size = float(input("Enter the step size: "))
-
+    print("Setting up Configuration space. Wait a few seconds....")
+    obs_space = Configuration_space(width, height, robot_radius, CLEARANCE)
     # Define start and goal nodes
-    start_point = Node(start_x, start_y, theta, 0, -1)  # Start node with cost 0 and no parent
-    goal_point = Node(end_x, end_y, theta, 0, -1)  # You can adjust the goal node coordinates as needed
-
+    start_point = Node(start_x, start_y, start_theta, 0.0, -1,c2g)  # Start node with cost 0 and no parent
+    goal_point = Node(end_x, end_y, end_theta, 0.0, -1, c2g)  # You can adjust the goal node coordinates as needed
     save_dir = "frames"
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
+
     timer_begin = time.time()
-    # Pass theta and step_size to astar function
-    traversed_nodes, goal_found = astar(start_point, goal_point, obs_space, theta, step_size)
+    traversed_nodes, goal_found = a_star(start_point, goal_point, obs_space, robot_step_size)
     timer_end = time.time()
     print("Time taken to explore:", timer_end - timer_begin, "seconds")
 
     if goal_found:
         x_path, y_path = backtrack(goal_point)
-        optimal_cost = goal_point.cost  # Cost of the optimal path
+        optimal_cost = goal_point.cost  # C11ost of the optimal path
         print("Optimal path cost:", optimal_cost)
-        plot_path(start_point, goal_point, x_path, y_path, traversed_nodes, frame_rate=60)
+        # print("Length", len(x_path))
+        plot_path(start_point, goal_point, x_path, y_path, traversed_nodes, CLEARANCE, frame_rate=30, step_size=robot_step_size)
         output_video = "output_video.mp4"
         print("Generating Video")
         frames_to_video(save_dir, output_video)
         print("Video created successfully!")
     else:
         print("Goal not found!")
-        
-
-
-
 
