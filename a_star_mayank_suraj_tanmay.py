@@ -26,49 +26,26 @@ class Node:
 
 # Define possible actions and associated cost increments
 def move_up_60_deg(x, y, theta, step_size, cost):
-    theta = theta + 60
-    x = x + (step_size * np.cos(np.radians(theta)))
-    y = y + (step_size * np.sin(np.radians(theta)))
-    x = round(x)
-    y = round(y)
-    cost = 1 + cost
-    return x, y, theta, cost
+    return move_in_direction(x, y, theta, step_size, cost, 60)
 
 def move_up_30_deg(x, y, theta, step_size, cost):
-    theta = theta + 30
-    x = x + (step_size * np.cos(np.radians(theta)))
-    y = y + (step_size * np.sin(np.radians(theta)))
-    x = round(x)
-    y = round(y)
-    cost = 1 + cost
-    return x, y, theta, cost
+    return move_in_direction(x, y, theta, step_size, cost, 30)
 
 def zero_movement(x, y, theta, step_size, cost):
-    theta = theta + 0
-    x = x + (step_size * np.cos(np.radians(theta)))
-    y = y + (step_size * np.sin(np.radians(theta)))
-    x = round(x)
-    y = round(y)
-    cost = 1 + cost
-    return x, y, theta, cost
+    return move_in_direction(x, y, theta, step_size, cost, 0)
 
 def move_30_down_deg(x, y, theta, step_size, cost):
-    theta = theta - 30
-    x = x + (step_size * np.cos(np.radians(theta)))
-    y = y + (step_size * np.sin(np.radians(theta)))
-    x = round(x)
-    y = round(y)
-    cost = 1 + cost
-    return x, y, theta, cost
+    return move_in_direction(x, y, theta, step_size, cost, -30)
 
 def move_down_60_deg(x, y, theta, step_size, cost):
-    theta = theta - 60
-    x = x + (step_size * np.cos(np.radians(theta)))
-    y = y + (step_size * np.sin(np.radians(theta)))
-    x = round(x)
-    y = round(y)
-    cost = 1 + cost
-    return x, y, theta, cost
+    return move_in_direction(x, y, theta, step_size, cost, -60)
+
+def move_in_direction(x, y, theta, step_size, cost, direction):
+    theta += direction
+    x += step_size * np.cos(np.radians(theta))
+    y += step_size * np.sin(np.radians(theta))
+    cost += 1
+    return round(x), round(y), theta, cost
 
 # Function to check if a point is inside a rectangle
 def is_point_inside_rectangle(x, y, vertices):
