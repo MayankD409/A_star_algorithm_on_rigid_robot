@@ -41,3 +41,8 @@ The script generates a visualization of the configuration space, explored nodes,
 ```bash
 python A_star_algorithm.py
 ```
+
+Group Details:
+Member 1 : Mayank Deshpande ==> UID: 120387333
+Member 2 : Tanmay Pancholi  ==> UID: 120116711
+Member 3 : Suraj Kalwaghe   ==> UID: 120417634
